@@ -201,7 +201,10 @@ def parse_page(filename):
                 if 'structure' in cs and 'type' in cs['structure']:
                     l_type = cs['structure']['type']
             scripts.add(l_type)
-            data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': l_type})
+            #data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': l_type})
+            id_line = line.get('id')  # AHT
+            data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': l_type, 'line_id': id_line})  # AHT
+
         if len(scripts) > 1:
             data['script_detection'] = True
         else:
@@ -330,7 +333,9 @@ def parse_alto(filename):
                     if ltype is not None:
                         scripts.add(ltype)
                         break
-            data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': ltype if ltype is not None else 'default'})
+            #data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': ltype if ltype is not None else 'default'})
+            id_line = line.get('ID')  # AHT
+            data['lines'].append({'baseline': baseline, 'boundary': boundary, 'text': text, 'script': ltype if ltype is not None else 'default', 'line_id': id_line})  # AHT
 
         if len(scripts) > 1:
             data['script_detection'] = True

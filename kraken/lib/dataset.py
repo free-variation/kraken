@@ -34,6 +34,7 @@ from PIL import Image, ImageDraw
 from itertools import groupby
 from collections import Counter, defaultdict
 from torchvision import transforms
+from torchvision.utils import save_image # AHT
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from typing import Dict, List, Tuple, Iterable, Sequence, Callable, Optional, Any, Union, cast
@@ -47,6 +48,7 @@ from kraken.lib.models import TorchSeqRecognizer
 from kraken.lib.segmentation import extract_polygons, calculate_polygonal_environment
 from kraken.lib.exceptions import KrakenInputException
 from kraken.lib.lineest import CenterNormalizer, dewarp
+from kraken.binarization import nlbin  # AHT
 
 __all__ = ['BaselineSet', 'PolygonGTDataset', 'GroundTruthDataset', 'compute_error', 'generate_input_transforms', 'preparse_xml_data']
 
@@ -104,6 +106,7 @@ def generate_input_transforms(batch: int, height: int, width: int, channels: int
                                                                                   width,
                                                                                   channels,
                                                                                   pad))
+    #print("Mode", mode) # AHT
     if mode != 'L' and force_binarization:
         raise KrakenInputException('Invalid input spec {}, {}, {}, {} in'
                                    ' combination with forced binarization.'.format(batch,
@@ -116,7 +119,8 @@ def generate_input_transforms(batch: int, height: int, width: int, channels: int
     out_transforms.append(transforms.Lambda(lambda x: x.convert(mode)))
 
     if force_binarization:
-        out_transforms.append(transforms.Lambda(lambda x: nlbin(im)))
+        #out_transforms.append(transforms.Lambda(lambda x: nlbin(im)))
+        out_transforms.append(transforms.Lambda(lambda x: nlbin(x))) # AHT
     # dummy transforms to ensure we can determine color mode of input material
     # from first two transforms. It's stupid but it works.
     out_transforms.append(transforms.Lambda(lambda x: x))
@@ -515,10 +519,16 @@ class PolygonGTDataset(Dataset):
                 if not isinstance(im, Image.Image):
                     im = Image.open(im)
                 im, _ = next(extract_polygons(im, {'type': 'baselines', 'lines': [{'baseline': item[0][1], 'boundary': item[0][2]}]}))
+                #im.save("kk_polextr.png") # AHT
                 im = self.head_transforms(im)
+                #im.save("kk_head_transforms.png") # AHT
                 if not is_bitonal(im):
                     self.im_mode = im.mode
+                #print(self.im_mode) # AHT
+                #print(self.tail_transforms) # AHT
                 im = self.tail_transforms(im)
+                #print(im.size()) # AHT
+                #save_image(im[0],"kk_tail_transforms.png") # AHT
                 if self.aug:
                     im = im.permute((1, 2, 0)).numpy()
                     o = self.aug(image=im)
@@ -705,9 +715,12 @@ class GroundTruthDataset(Dataset):
                 im = item[0]
                 if not isinstance(im, Image.Image):
                     im = Image.open(im)
+                #im.save("kk_isolated.png") # AHT
                 im = self.head_transforms(im)
+                #im.save("kk_head_transforms.png") # AHT
                 if not is_bitonal(im):
                     self.im_mode = im.mode
+                #print(self.im_mode) # AHT
                 im = self.tail_transforms(im)
                 if self.aug:
                     im = im.permute((1, 2, 0)).numpy()

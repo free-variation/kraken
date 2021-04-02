@@ -23,7 +23,7 @@ import numpy as np
 import shapely.geometry as geom
 from collections import defaultdict
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps # AHT
 
 from scipy.stats import linregress
 from scipy.ndimage import maximum_filter
@@ -346,7 +346,12 @@ def vectorize_regions(im: np.ndarray, threshold: float = 0.5):
         if len(boundary) > 2:
             boundaries.append(geom.Polygon(boundary).simplify(10))
     # merge regions that overlap after simplification
-    boundaries = [x.boundary for x in unary_union(boundaries)]
+    unionPoly = unary_union(boundaries) # AHT
+    if isinstance(unionPoly, geom.Polygon): # AHT
+        boundaries = [unionPoly.boundary] # AHT
+    else: # AHT
+        boundaries = [x.boundary for x in unionPoly] # AHT
+    #boundaries = [x.boundary for x in unary_union(boundaries)]
     return [np.array(x, dtype=np.uint)[:,[1,0]].tolist() for x in boundaries]
 
 
@@ -382,7 +387,8 @@ def _rotate(image, angle, center, scale, cval=0):
     tform5 = SimilarityTransform(translation=translation)
     tform = tform5 + tform
     tform.params[2] = (0, 0, 1)
-    return tform, warp(image, tform, output_shape=output_shape, order=0, cval=cval, clip=False, preserve_range=True)
+    #return tform, warp(image, tform, output_shape=output_shape, order=0, cval=cval, clip=False, preserve_range=True)
+    return tform, warp(image, tform, output_shape=output_shape, order=0, cval=cval, clip=False, preserve_range=True, mode='edge') # AHT
 
 
 def line_regions(line, regions):
@@ -843,7 +849,10 @@ def extract_polygons(im: Image.Image, bounds: Dict[str, Any]) -> Image:
         im = np.array(im)
 
         for line in bounds['lines']:
+            if not line['boundary']: continue # AHT
             pl = np.array(line['boundary'])
+            #print(im.shape,pl); sys.exit(0) # AHT
+            pl = np.clip(pl, [0, 0], [im.shape[1]-1, im.shape[0]-1]) #AHT
             baseline = np.array(line['baseline'])
             c_min, c_max = int(pl[:,0].min()), int(pl[:,0].max())
             r_min, r_max = int(pl[:,1].min()), int(pl[:,1].max())
@@ -871,7 +880,8 @@ def extract_polygons(im: Image.Image, bounds: Dict[str, Any]) -> Image:
                 r, c = draw.polygon(offset_polygon[:,1], offset_polygon[:,0])
                 mask = np.zeros(patch.shape[:2], dtype=np.bool)
                 mask[r, c] = True
-                patch[mask != True] = 0
+                #patch[mask != True] = 0
+                patch[mask != True] = 255  # AHT
                 extrema = offset_polygon[(0,-1),:]
                 # scale line image to max 600 pixel width
                 tform, rotated_patch = _rotate(patch, angle, center=extrema[0], scale=1.0, cval=0)
@@ -922,15 +932,19 @@ def extract_polygons(im: Image.Image, bounds: Dict[str, Any]) -> Image:
                 mask = np.zeros(patch.shape[:2], dtype=np.bool)
                 r, c = draw.polygon(offset_polygon[:,1], offset_polygon[:,0])
                 mask[r, c] = True
-                patch[mask != True] = 0
+                #patch[mask != True] = 0
+                patch[mask != True] = 255  # AHT
                 # estimate piecewise transform
                 src_points = np.concatenate((offset_baseline, offset_polygon))
                 dst_points = np.concatenate((offset_bl_dst_pts, offset_pol_dst_pts))
                 tform = PiecewiseAffineTransform()
                 tform.estimate(src_points, dst_points)
-                o = warp(patch, tform.inverse, output_shape=output_shape, preserve_range=True, order=order)
+                #o = warp(patch, tform.inverse, output_shape=output_shape, preserve_range=True, order=order)
+                o = warp(patch, tform.inverse, output_shape=output_shape, preserve_range=True, order=order, mode='edge') # AHT
                 i = Image.fromarray(o.astype('uint8'))
-            yield i.crop(i.getbbox()), line
+            comp_BB = ImageOps.invert(i.convert('L')).getbbox() # AHT
+            #yield i.crop(i.getbbox()), line
+            yield i.crop(comp_BB), line # AHT
     else:
         if bounds['text_direction'].startswith('vertical'):
             angle = 90

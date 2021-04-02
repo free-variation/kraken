@@ -30,7 +30,7 @@ RECOGNITION_HYPER_PARAMS = {'pad': 16,
                             'optimizer': 'Adam',
                             'lrate': 1e-3,
                             'momentum': 0.9,
-                            'weight_decay': 0,
+                            'weight_decay': 0.0,
                             'schedule': 'constant',
                             'normalization': None,
                             'normalize_whitespace': True,
@@ -44,7 +44,7 @@ RECOGNITION_HYPER_PARAMS = {'pad': 16,
                             'rop_patience': 5,
                             # cosine
                             'cos_t_max': 50,
-                           }
+                           } # AHT : change weight_decay type to float
 
 SEGMENTATION_HYPER_PARAMS = {'line_width': 8,
                              'freq': 1.0,

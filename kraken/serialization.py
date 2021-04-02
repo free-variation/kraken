@@ -195,7 +195,10 @@ def serialize(records: Sequence[ocr_record],
                         pol = pol.buffer(0.5)
                     pols.append(pol)
                 pols = unary_union(pols)
+                #print('Before issue', pols) # AHT
+                if not pols: continue # AHT
                 coords = np.array(pols.convex_hull.exterior.coords, dtype=np.uint).tolist()
+                #print('After issue') # AHT
                 seg_struct['boundary'] = coords
             line['recognition'].append(seg_struct)
             char_idx += len(segment)

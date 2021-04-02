@@ -185,7 +185,8 @@ class mm_rpred(object):
                            '(mode {}). This will result in severely degraded '
                            'performance'.format(im.mode))
         if 'type' in bounds and bounds['type'] == 'baselines':
-            valid_norm = False
+            #valid_norm = False
+            valid_norm = True # AHT
             self.len = len(bounds['lines'])
             self.seg_key = 'lines'
             self.next_iter = self._recognize_baseline_line
@@ -193,6 +194,7 @@ class mm_rpred(object):
             scripts = [x['script'] for x in bounds['lines']]
         else:
             valid_norm = True
+            #valid_norm = False # AHT
             self.len = len(bounds['boxes'])
             self.seg_key = 'boxes'
             self.next_iter = self._recognize_box_line
@@ -213,6 +215,7 @@ class mm_rpred(object):
             network = nets[script]
             batch, channels, height, width = network.nn.input
             self.ts[script] = generate_input_transforms(batch, height, width, channels, pad, valid_norm)
+            #print(batch, height, width, channels, pad, valid_norm) # AHT
 
         self.im = im
         self.nets = nets

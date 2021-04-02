@@ -542,7 +542,8 @@ def test(ctx, batch_size, model, evaluation_files, device, pad, threads,
         if repolygonize:
             message('Repolygonizing data')
         test_set = preparse_xml_data(test_set, format_type, repolygonize)
-        valid_norm = False
+        #valid_norm = False
+        valid_norm = True  # AHT
         DatasetClass = PolygonGTDataset
     else:
         DatasetClass = GroundTruthDataset
@@ -554,6 +555,7 @@ def test(ctx, batch_size, model, evaluation_files, device, pad, threads,
             logger.warning('Repolygonization enabled in `path` mode. Will be ignored.')
         test_set = [{'image': img} for img in test_set]
         valid_norm = True
+        #valid_norm = False # AHT
 
     if len(test_set) == 0:
         raise click.UsageError('No evaluation data was provided to the test command. Use `-e` or the `test_set` argument.')
@@ -568,12 +570,14 @@ def test(ctx, batch_size, model, evaluation_files, device, pad, threads,
         logger.info('Evaluating {}'.format(p))
         batch, channels, height, width = net.nn.input
         ts = generate_input_transforms(batch, height, width, channels, pad, valid_norm, force_binarization)
+        #print(batch, height, width, channels, pad, valid_norm, force_binarization)  # AHT
         ds = DatasetClass(normalization=normalization,
                           whitespace_normalization=normalize_whitespace,
                           reorder=reorder,
                           im_transforms=ts,
                           preload=False)
         for line in test_set:
+            #print(line)  # AHT
             try:
                 ds.add(**line)
             except KrakenInputException as e:
