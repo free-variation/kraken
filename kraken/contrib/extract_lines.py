@@ -31,7 +31,7 @@ def cli(format_type, model, repolygonize, files):
 
     from PIL import Image
     from os.path import splitext
-    from kraken import blla
+    from kraken import binarization, blla  # AHT
     from kraken.lib import dataset, segmentation, vgsl
 
     if model is None:
@@ -39,11 +39,18 @@ def cli(format_type, model, repolygonize, files):
             click.echo(f'Processing {doc} ', nl=False)
             data = dataset.preparse_xml_data([doc], format_type, repolygonize=repolygonize)
             if len(data) > 0:
-                bounds = {'type': 'baselines', 'lines': [{'boundary': t['boundary'], 'baseline': t['baseline'], 'text': t['text']} for t in data]}
-                for idx, (im, box) in enumerate(segmentation.extract_polygons(Image.open(data[0]['image']), bounds)):
+                #bounds = {'type': 'baselines', 'lines': [{'boundary': t['boundary'], 'baseline': t['baseline'], 'text': t['text']} for t in data]}
+                bounds = {'type': 'baselines', 'lines': [{'boundary': t['boundary'], 'baseline': t['baseline'], 'text': t['text'], 'ID': t['line_id'] if 'line_id' in t else ''} for t in data]} # AHT
+                bw_im = binarization.nlbin(Image.open(data[0]['image'])) # AHT
+                #print(bw_im.getcolors()); break # AHT
+                #for idx, (im, box) in enumerate(segmentation.extract_polygons(Image.open(data[0]['image']), bounds)):
+                for idx, (im, box) in enumerate(segmentation.extract_polygons(bw_im, bounds)): # AHT
+                    idLin = box['ID'] if box['ID'] else idx 
                     click.echo('.', nl=False)
-                    im.save('{}.{}.jpg'.format(splitext(data[0]['image'])[0], idx))
-                    with open('{}.{}.gt.txt'.format(splitext(data[0]['image'])[0], idx), 'w') as fp:
+                    #im.save('{}.{}.png'.format(splitext(data[0]['image'])[0], idx))
+                    im.save('{}.{}.png'.format(splitext(data[0]['image'])[0], idLin))
+                    #with open('{}.{}.gt.txt'.format(splitext(data[0]['image'])[0], idx), 'w') as fp:
+                    with open('{}.{}.gt.txt'.format(splitext(data[0]['image'])[0], idLin), 'w') as fp:
                         fp.write(box['text'])
     else:
         net = vgsl.TorchVGSLModel.load_model(model)
@@ -53,7 +60,7 @@ def cli(format_type, model, repolygonize, files):
             bounds = blla.segment(full_im, model=net)
             for idx, (im, box) in enumerate(segmentation.extract_polygons(full_im, bounds)):
                 click.echo('.', nl=False)
-                im.save('{}.{}.jpg'.format(splitext(doc)[0], idx))
+                im.save('{}.{}.png'.format(splitext(doc)[0], idx))
 
 if __name__ == '__main__':
     cli()
